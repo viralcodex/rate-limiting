@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rate Limit Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --ink: #1e1e2e;
+      --ink2: #4a4a5a;
+      --ink3: #8f8fa0;
+      --border: #e8e6e0;
+      --accent: #6366f1;
+      --accent-bg: #eef2ff;
+      --green: #22c55e;
+      --green-bg: #dcfce7;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --amber: #f59e0b;
+      --amber-bg: #fef9c3;
+      --radius: 8px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 44px 1fr;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      background: var(--ink);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+    }
+
+    .brand {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-mark {
+      width: 20px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 4px;
+      display: grid;
+      place-items: center;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: 20px;
+    }
+
+    .tab {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      color: #777;
+      padding: 5px 10px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all .12s;
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      color: #bbb;
+      background: rgba(255, 255, 255, .06);
+    }
+
+    .tab.active {
+      color: #fff;
+      background: rgba(255, 255, 255, .1);
+    }
+
+    .tab .pip {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .pip.live {
+      background: var(--green);
+    }
+
+    .clock {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #555;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .clock-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .2
+      }
+    }
+
+    /* ── Main ── */
+    .main {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      padding: 12px 16px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    /* Row 1: Header */
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .algo-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+
+    .algo-desc {
+      font-size: 12px;
+      color: var(--ink3);
+      line-height: 1.4;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--ink);
+      transition: all .08s;
+    }
+
+    .btn:hover {
+      border-color: var(--ink3);
+    }
+
+    .btn:active {
+      transform: scale(.97);
+    }
+
+    .btn-send {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-send:hover {
+      opacity: .9;
+      border-color: var(--accent);
+    }
+
+    .btn-burst {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+    }
+
+    .btn-burst:hover {
+      opacity: .9;
+      border-color: var(--red);
+    }
+
+    .btn-burst:disabled {
+      opacity: .4;
+      cursor: wait;
+    }
+
+    .fld {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      width: 52px;
+      padding: 5px 6px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      text-align: center;
+      background: var(--surface);
+      color: var(--ink);
+      --moz-appearance: textfield;
+    }
+
+    .fld::-webkit-inner-spin-button,
+    .fld::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .fld:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .fld-label {
+      font-size: 9px;
+      color: var(--ink3);
+      letter-spacing: .2px;
+    }
+
+    /* Row 2: Metrics strip */
+    .metrics-row {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .metric {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      min-width: 88px;
+    }
+
+    .metric-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--ink3);
+      font-weight: 600;
+    }
+
+    .metric-val {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .c-accent {
+      color: var(--accent);
+    }
+
+    .c-green {
+      color: var(--green);
+    }
+
+    .c-red {
+      color: var(--red);
+    }
+
+    .c-amber {
+      color: var(--amber);
+    }
+
+    .token-bar {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .token-bar-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--ink3);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .token-track {
+      flex: 1;
+      height: 10px;
+      background: var(--bg);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .token-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 5px;
+      transition: width .3s ease;
+    }
+
+    .token-fill.low {
+      background: var(--red);
+    }
+
+    .token-fill.mid {
+      background: var(--amber);
+    }
+
+    .token-num {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+      min-width: 55px;
+      text-align: right;
+    }
+
+    .token-cap {
+      color: var(--ink3);
+      font-weight: 400;
+      font-size: 11px;
+    }
+
+    .token-timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--ink3);
+      white-space: nowrap;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    .token-timer:empty {
+      display: none;
+    }
+
+    /* Row 3: Bottom panels */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .panel-head h3 {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--ink3);
+    }
+
+    .panel-head .legend {
+      display: flex;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .panel-head .legend span {
+      font-size: 10px;
+      color: var(--ink3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .panel-head .count {
+      margin-left: auto;
+      font-size: 10px;
+      color: var(--ink3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .chart-panel canvas {
+      flex: 1;
+      width: 100%;
+    }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2px 0;
+    }
+
+    .log-body::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .log-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .log-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 3px 12px;
+      font-size: 11px;
+      border-bottom: 1px solid #f0eeea;
+    }
+
+    .log-row .code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    .code.ok {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .code.fail {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .code.na {
+      background: var(--amber-bg);
+      color: var(--amber);
+    }
+
+    .log-row .meth {
+      color: var(--ink3);
+      font-size: 10px;
+    }
+
+    .log-row .url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--ink2);
+    }
+
+    .log-row .lat {
+      color: var(--ink3);
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+
+    .log-row .ts {
+      color: var(--ink3);
+      opacity: .5;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+
+    .log-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--ink3);
+      font-size: 12px;
+    }
+
+    .main {
+      position: relative;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+            <rect y="6" width="3" height="6" fill="#fff" />
+            <rect x="4.5" y="3" width="3" height="9" fill="#fff" />
+            <rect x="9" width="3" height="12" fill="#fff" />
+          </svg>
+        </div>
+        Rate Limit Lab
+      </div>
+      <div class="tabs" id="tabs"></div>
+      <div class="clock">
+        <div class="clock-dot"></div>
+        <span id="clock">--:--:--</span>
+      </div>
+    </div>
+    <div class="main" id="main">
+
+      <!-- Row 1: Header -->
+      <div class="header-row">
+        <div class="algo-title" id="algoTitle"></div>
+        <div class="algo-desc" id="algoDesc"></div>
+        <div class="controls">
+          <button class="btn btn-send" id="bFire">&#9654; Send</button>
+          <button class="btn btn-burst" id="bBurst">&#9889; Burst</button>
+          <input class="fld" id="bN" type="number" value="120" min="1" max="999" />
+          <span class="fld-label">Requests</span>
+          <input class="fld" id="bC" type="number" value="15" min="1" max="50" />
+          <span class="fld-label">Concurrency</span>
+          <button class="btn" id="bClear">Clear</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Metrics -->
+      <div class="metrics-row">
+        <div class="metric">
+          <div class="metric-label">Total</div>
+          <div class="metric-val c-accent" id="sT">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Accepted</div>
+          <div class="metric-val c-green" id="sO">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Rejected</div>
+          <div class="metric-val c-red" id="sF">0</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Pass Rate</div>
+          <div class="metric-val c-amber" id="sR">&mdash;</div>
+        </div>
+        <div class="token-bar">
+          <div class="token-bar-label" id="gLabel">Tokens</div>
+          <div class="token-track">
+            <div class="token-fill" id="gFill" style="width:100%"></div>
+          </div>
+          <div class="token-num" id="gNum"><span id="gVal">100</span> <span class="token-cap" id="gCap">/ 100</span>
+          </div>
+          <div class="token-timer" id="gTimer"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Chart + Log -->
+      <div class="bottom-row">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <h3 id="vizTitle">Visualization</h3>
+            <div class="legend">
+              <span><span class="legend-dot" style="background:var(--green)"></span> Accepted</span>
+              <span><span class="legend-dot" style="background:var(--red)"></span> Rejected</span>
+            </div>
+          </div>
+          <canvas id="cvs"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Request Log</h3><span class="count" id="lCt">0</span>
+          </div>
+          <div class="log-body" id="lScr">
+            <div class="log-empty">No requests yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var ALGOS = [
+        { key: "token-bucket", name: "Token Bucket", desc: "Tokens refill at a steady rate. Each request costs tokens. Bursts allowed up to capacity; once empty, requests are rejected until refill.", barLabel: "Tokens" },
+        { key: "fixed-window", name: "Fixed Window", desc: "Time is split into fixed windows. A counter tracks requests per window; once the limit is hit, requests are rejected until the next window.", barLabel: "Remaining" },
+        { key: "sliding-window-log", name: "Sliding Log", desc: "Each request timestamp is stored. Entries older than the window are purged; if remaining count exceeds the limit, the request is denied.", barLabel: "Remaining" },
+        { key: "sliding-window-counter", name: "Sliding Counter", desc: "Combines a weighted count from the previous window with the current window\u2019s count to approximate a sliding window.", barLabel: "Remaining" },
+        { key: "leaky-bucket", name: "Leaky Bucket", desc: "Requests enter a finite queue and drain at a constant rate. When the queue is full, new arrivals are dropped.", barLabel: "Queue" },
+      ];
+
+      var cur = 0, logs = [], stats = { total: 0, ok: 0, fail: 0 }, tk = { tokens: 100, capacity: 100, resetsIn: 0, prevCount: 0, currCount: 0, weight: 0 }, sending = false, pollTimer = null, parts = [], vizOn = false;
+
+      setInterval(function () {
+        $("clock").textContent = new Date().toLocaleTimeString("en-GB", { hour12: false });
+      }, 1000);
+
+      // Build tabs
+      var tabsEl = $("tabs");
+      ALGOS.forEach(function (a, i) {
+        var t = document.createElement("button");
+        t.className = "tab" + (i === 0 ? " active" : "");
+        t.innerHTML = a.name + '<span class="pip live"></span>';
+        t.addEventListener("click", function () { switchTo(i); });
+        tabsEl.appendChild(t);
+      });
+
+      // Wire static buttons once
+      $("bFire").addEventListener("click", fire);
+      $("bBurst").addEventListener("click", burst);
+      $("bClear").addEventListener("click", function () {
+        logs = []; stats = { total: 0, ok: 0, fail: 0 }; parts = []; refreshUI();
+      });
+
+      function parseTk(d) {
+        return { tokens: d.tokens, capacity: d.capacity, resetsIn: d.resetsIn || 0, prevCount: d.prevCount || 0, currCount: d.currCount || 0, weight: d.weight || 0 };
+      }
+
+      function refreshUI() {
+        $("sT").textContent = stats.total;
+        $("sO").textContent = stats.ok;
+        $("sF").textContent = stats.fail;
+        $("sR").textContent = passRate();
+        $("lScr").innerHTML = rlogs();
+        $("lCt").textContent = logs.length;
+        gauge();
+      }
+
+      function switchTo(i) {
+        cur = i; logs = []; stats = { total: 0, ok: 0, fail: 0 }; parts = [];
+        tk = { tokens: 100, capacity: 100, resetsIn: 0, prevCount: 0, currCount: 0, weight: 0 };
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        document.querySelectorAll(".tab").forEach(function (t, j) {
+          t.classList.toggle("active", j === i);
+        });
+        var a = ALGOS[cur];
+        $("algoTitle").textContent = a.name;
+        $("algoDesc").textContent = a.desc;
+        $("gLabel").textContent = a.barLabel;
+        refreshUI();
+        pollTimer = setInterval(fetchStatus, 500);
+        fetchStatus();
+      }
+
+      function passRate() {
+        return stats.total ? ((stats.ok / stats.total) * 100).toFixed(1) + "%" : "\u2014";
+      }
+
+      function rlogs() {
+        if (!logs.length) return '<div class="log-empty">No requests yet</div>';
+        var k = ALGOS[cur].key;
+        return logs.map(function (l) {
+          var c = l.s === 200 ? "ok" : l.s === 429 ? "fail" : "na";
+          return '<div class="log-row">' +
+            '<span class="code ' + c + '">' + l.s + '</span>' +
+            '<span class="meth">GET</span>' +
+            '<span class="url">/api/' + k + '/hit</span>' +
+            '<span class="lat">' + l.ms + 'ms</span>' +
+            '<span class="ts">' + l.t + '</span>' +
+            '</div>';
+        }).join("");
+      }
+
+      async function fire() {
+        var a = ALGOS[cur], t0 = performance.now();
+        try {
+          var r = await fetch("/api/" + a.key + "/hit");
+          var ms = Math.round(performance.now() - t0);
+          var s = r.status;
+          var body = await r.json().catch(function () { return null });
+          stats.total++;
+          if (s === 200) stats.ok++; else stats.fail++;
+          if (body && body.tokens != null) tk = parseTk(body);
+          else if (s === 429) { tk.tokens = 0; tk.resetsIn = body && body.resetsIn ? body.resetsIn : tk.resetsIn; }
+          logs.unshift({ s: s, ms: ms, t: new Date().toLocaleTimeString("en-GB") });
+          spawnReq(s === 200);
+          if (logs.length > 300) logs.pop();
+          refreshUI();
+        } catch (e) { console.error(e) }
+      }
+
+      async function burst() {
+        if (sending) return;
+        sending = true;
+        var n = parseInt($("bN").value) || 120;
+        var c = parseInt($("bC").value) || 15;
+        var btn = $("bBurst");
+        btn.disabled = true;
+        var sent = 0;
+        while (sent < n) {
+          var b = Math.min(c, n - sent);
+          btn.textContent = sent + "/" + n;
+          await Promise.all(Array.from({ length: b }, fire));
+          sent += b;
+        }
+        btn.innerHTML = "&#9889; Burst";
+        btn.disabled = false;
+        sending = false;
+      }
+
+      async function fetchStatus() {
+        try {
+          var r = await fetch("/api/" + ALGOS[cur].key + "/status");
+          if (!r.ok) return;
+          var d = await r.json();
+          if (d.tokens != null) tk = parseTk(d);
+          gauge();
+        } catch (e) { }
+      }
+
+      function gauge() {
+        var f = $('gFill'), v = $('gVal'), num = $('gNum'), timer = $('gTimer');
+        if (!f) return;
+        var p = tk.capacity > 0 ? (tk.tokens / tk.capacity) * 100 : 0;
+        f.style.width = p + "%";
+        f.className = "token-fill" + (p < 15 ? " low" : p < 40 ? " mid" : "");
+        if (v) v.textContent = tk.tokens;
+        if ($('gCap')) $('gCap').textContent = "/ " + tk.capacity;
+        if (num) num.style.color = p < 15 ? "var(--red)" : p < 40 ? "var(--amber)" : "var(--accent)";
+        if (timer) {
+          if (tk.resetsIn > 0) {
+            var s = (tk.resetsIn / 1000);
+            timer.textContent = "full in " + (s >= 1 ? s.toFixed(1) + "s" : Math.round(tk.resetsIn) + "ms");
+          } else {
+            timer.textContent = "";
+          }
+        }
+      }
+
+      // ── Visualization System ──
+      function easeOut(t) { return 1 - (1 - t) * (1 - t) * (1 - t); }
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+      function rrect(ctx, x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        ctx.beginPath(); ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+      }
+
+      function box(ctx, x, y, w, h, r) {
+        rrect(ctx, x, y, w, h, r); ctx.fillStyle = '#fafaf8'; ctx.fill();
+        ctx.strokeStyle = '#d0cec8'; ctx.lineWidth = 2.5; ctx.stroke();
+      }
+
+      function circ(ctx, x, y, r, color, alpha) {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.globalAlpha = alpha != null ? clamp(alpha, 0, 1) : 1;
+        ctx.fill(); ctx.globalAlpha = 1;
+      }
+
+      function txt(ctx, text, x, y, font, color, align) {
+        ctx.fillStyle = color; ctx.font = font; ctx.textAlign = align || 'center'; ctx.fillText(text, x, y);
+      }
+
+      function gridDots(ctx, bx, by, bw, bh, cr, gap, filled, total, color, fromBottom, alpha) {
+        var pad = 10;
+        var cols = Math.max(1, Math.floor((bw - pad * 2) / (cr * 2 + gap)));
+        var gridW = cols * (cr * 2 + gap) - gap;
+        var ox = bx + (bw - gridW) / 2;
+        var n = total != null ? total : filled, drawn = 0, fa = alpha != null ? alpha : 0.85;
+        for (var row = 0; drawn < n; row++) {
+          for (var col = 0; col < cols && drawn < n; col++) {
+            var cx = ox + cr + col * (cr * 2 + gap);
+            var cy = fromBottom ? by + bh - pad - cr - row * (cr * 2 + gap) : by + pad + cr + row * (cr * 2 + gap);
+            if (fromBottom ? cy - cr < by + pad : cy + cr > by + bh - pad) return;
+            circ(ctx, cx, cy, cr, drawn < filled ? color : '#eae8e2', drawn < filled ? fa : 1);
+            drawn++;
+          }
+        }
+      }
+
+      function spawnReq(ok) {
+        if (parts.length > 60) return;
+        parts.push({ ok: ok, t: 0, s: Math.random() });
+      }
+
+      function startViz() {
+        if (vizOn) return; vizOn = true;
+        (function loop() { drawViz(); requestAnimationFrame(loop); })();
+      }
+
+      function drawViz() {
+        var cvs = $('cvs'); if (!cvs) return;
+        var ctx = cvs.getContext('2d');
+        var dpr = devicePixelRatio || 1;
+        var rc = cvs.getBoundingClientRect();
+        var nw = Math.round(rc.width * dpr), nh = Math.round(rc.height * dpr);
+        if (cvs.width !== nw || cvs.height !== nh) { cvs.width = nw; cvs.height = nh; }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        var W = rc.width, H = rc.height;
+        ctx.clearRect(0, 0, W, H);
+        var k = ALGOS[cur].key;
+        if (k === 'token-bucket') vizTB(ctx, W, H);
+        else if (k === 'fixed-window') vizFW(ctx, W, H);
+        else if (k === 'sliding-window-log') vizSL(ctx, W, H);
+        else if (k === 'sliding-window-counter') vizSC(ctx, W, H);
+        else if (k === 'leaky-bucket') vizLB(ctx, W, H);
+        for (var i = parts.length - 1; i >= 0; i--) { parts[i].t++; if (parts[i].t > 90) parts.splice(i, 1); }
+      }
+
+      // ── Token Bucket Viz ──
+      function vizTB(ctx, W, H) {
+        var pad = 20;
+        var bw = Math.min(200, W * 0.26), bh = H * 0.68;
+        var bx = (W - bw) / 2, by = (H - bh) / 2, rad = 12;
+        var ratio = tk.capacity > 0 ? tk.tokens / tk.capacity : 0;
+        var ay = by + bh / 2;
+
+        // Incoming arrow
+        txt(ctx, 'INCOMING', (pad + bx) / 2, ay - 18, "700 11px 'JetBrains Mono'", '#555');
+        ctx.strokeStyle = '#c0beb8'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(pad + 10, ay); ctx.lineTo(bx - 12, ay); ctx.stroke();
+        ctx.fillStyle = '#555';
+        ctx.beginPath(); ctx.moveTo(bx - 18, ay - 5); ctx.lineTo(bx - 12, ay); ctx.lineTo(bx - 18, ay + 5); ctx.fill();
+
+        // Bucket + tokens
+        box(ctx, bx, by, bw, bh, rad);
+        var tc = ratio < 0.15 ? '#ef4444' : ratio < 0.4 ? '#eab308' : '#6366f1';
+        gridDots(ctx, bx, by, bw, bh, 5, 2.5, Math.min(tk.tokens, 200), null, tc, true);
+        txt(ctx, '\u25BC refill', bx + bw / 2, by - 8, "600 11px 'JetBrains Mono'", '#7c3aed');
+        txt(ctx, tk.tokens + ' / ' + tk.capacity + ' tokens', bx + bw / 2, by + bh + 22, "600 13px 'JetBrains Mono'", '#555');
+
+        // Outgoing arrow
+        var rx = bx + bw;
+        ctx.strokeStyle = '#c0beb8'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(rx + 12, ay); ctx.lineTo(W - pad - 10, ay); ctx.stroke();
+        ctx.fillStyle = '#555';
+        ctx.beginPath(); ctx.moveTo(W - pad - 16, ay - 5); ctx.lineTo(W - pad - 10, ay); ctx.lineTo(W - pad - 16, ay + 5); ctx.fill();
+        txt(ctx, 'PASSED', (rx + W - pad) / 2, ay - 18, "700 11px 'JetBrains Mono'", '#555');
+        txt(ctx, 'rejected \u2193', (pad + bx) / 2, ay + 18, "500 10px 'Plus Jakarta Sans'", '#888');
+
+        // Particles
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], t = p.t, s = p.s, px, py, pr = 7, al = 1;
+          if (p.ok) {
+            if (t < 18) { var f = easeOut(t / 18); px = lerp(pad, bx - 8, f); py = lerp(by + bh * (0.15 + s * 0.7), ay, f); }
+            else if (t < 30) { px = bx + bw / 2 + (s - 0.5) * bw * 0.3; py = ay; pr = lerp(7, 2.5, (t - 18) / 12); al = lerp(1, 0, (t - 18) / 12); }
+            else { var f = easeOut((t - 30) / 40); px = lerp(rx + 12, W - pad, f); py = ay + (s - 0.5) * 28; al = 1 - f; }
+            circ(ctx, px, py, pr, '#22c55e', al);
+            if (t >= 30 && al > 0.2) {
+              ctx.strokeStyle = '#22c55e'; ctx.globalAlpha = clamp(al, 0, 1); ctx.lineWidth = 2;
+              ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.lineTo(px - 1, py + 3); ctx.lineTo(px + 4, py - 3); ctx.stroke(); ctx.globalAlpha = 1;
+            }
+          } else {
+            if (t < 16) { var f = easeOut(t / 16); px = lerp(pad, bx - 8, f); py = lerp(by + bh * (0.15 + s * 0.7), ay, f); }
+            else { var f = (t - 16) / 74; px = bx - 8 - f * (20 + s * 40); py = ay + f * f * 160; al = 1 - f; pr = lerp(7, 4, f); }
+            circ(ctx, px, py, clamp(pr, 0, 12), '#ef4444', al);
+            if (t >= 16 && t < 50 && al > 0.3) {
+              ctx.strokeStyle = '#ef4444'; ctx.globalAlpha = clamp(al, 0, 1); ctx.lineWidth = 1.5;
+              ctx.beginPath(); ctx.moveTo(px - 3, py - 3); ctx.lineTo(px + 3, py + 3); ctx.moveTo(px + 3, py - 3); ctx.lineTo(px - 3, py + 3); ctx.stroke(); ctx.globalAlpha = 1;
+            }
+          }
+        }
+      }
+
+      // ── Fixed Window Viz ──
+      function vizFW(ctx, W, H) {
+        var ww = W * 0.7, wh = H * 0.52, wx = (W - ww) / 2, wy = H * 0.24, rad = 12;
+        var progress = tk.resetsIn > 0 ? clamp(1 - tk.resetsIn / 10000, 0, 1) : 0;
+        var used = tk.capacity - tk.tokens;
+
+        // Timer bar
+        var tbh = 8, tby = wy - tbh - 16;
+        rrect(ctx, wx, tby, ww, tbh, 4); ctx.fillStyle = '#eae8e2'; ctx.fill();
+        if (progress > 0) {
+          ctx.save(); rrect(ctx, wx, tby, ww, tbh, 4); ctx.clip();
+          ctx.fillStyle = '#6366f1'; ctx.fillRect(wx, tby, ww * progress, tbh); ctx.restore();
+        }
+        txt(ctx, 'window ' + (tk.resetsIn > 0 ? (tk.resetsIn / 1000).toFixed(1) + 's left' : 'idle'), wx + ww / 2, tby - 8, "600 11px 'JetBrains Mono'", '#555');
+
+        // Window + slots
+        box(ctx, wx, wy, ww, wh, rad);
+        gridDots(ctx, wx, wy, ww, wh, 10, 6, used, tk.capacity, '#6366f1', false);
+        txt(ctx, used + ' / ' + tk.capacity + ' used this window', wx + ww / 2, wy + wh + 22, "600 13px 'JetBrains Mono'", '#555');
+
+        // Particles
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], t = p.t, s = p.s, px, py, pr = 7, al = 1;
+          var tgtX = wx + ww * (0.15 + s * 0.7);
+          if (p.ok) {
+            if (t < 22) { var f = easeOut(t / 22); px = tgtX; py = lerp(-10, wy + wh * 0.3 + s * wh * 0.3, f); }
+            else if (t < 38) { px = tgtX; py = wy + wh * 0.3 + s * wh * 0.3; pr = lerp(7, 3, (t - 22) / 16); al = lerp(1, 0, (t - 22) / 16); }
+            else al = 0;
+            if (al > 0) circ(ctx, px, py, pr, '#22c55e', al);
+          } else {
+            if (t < 18) { var f = easeOut(t / 18); px = tgtX; py = lerp(-10, wy - 6, f); }
+            else { var f = (t - 18) / 72; px = tgtX + (s - 0.5) * 100 * f; py = wy - 6 + f * f * 130; al = 1 - f; }
+            if (al > 0) circ(ctx, px, clamp(py, -10, H + 10), clamp(pr, 1, 12), '#ef4444', al);
+          }
+        }
+      }
+
+      // ── Sliding Window Log Viz ──
+      function vizSL(ctx, W, H) {
+        var tw = W * 0.82, th = H * 0.34, tx = (W - tw) / 2, ty = (H - th) / 2 - 8, rad = th / 2;
+        var used = tk.capacity - tk.tokens;
+
+        // Tube
+        box(ctx, tx, ty, tw, th, rad);
+
+        // Request dots
+        var cr = Math.min(10, th / 2 - 6), mg = 12;
+        var maxSlots = Math.max(1, Math.floor((tw - mg * 2) / (cr * 2 + 6)));
+        for (var i = 0; i < used && i < maxSlots; i++) {
+          circ(ctx, tx + tw - mg - cr - i * (cr * 2 + 6), ty + th / 2, cr, '#6366f1', 0.45 + 0.55 * (1 - i / Math.max(used, 1)));
+        }
+
+        // Labels
+        txt(ctx, '\u2190 oldest expire', tx, ty - 14, "500 12px 'Plus Jakarta Sans'", '#777', 'left');
+        txt(ctx, 'newest \u2192', tx + tw, ty - 14, "500 12px 'Plus Jakarta Sans'", '#777', 'right');
+        txt(ctx, used + ' / ' + tk.capacity + ' logged', tx + tw / 2, ty + th + 24, "600 13px 'JetBrains Mono'", '#555');
+        if (tk.resetsIn > 0) {
+          txt(ctx, 'next expiry ' + (tk.resetsIn / 1000).toFixed(1) + 's', tx + tw / 2, ty + th + 42, "600 11px 'JetBrains Mono'", '#d97706');
+        }
+
+        // Expire animation
+        if (used > 0 && tk.resetsIn > 0 && tk.resetsIn < 1500) {
+          var fa = tk.resetsIn / 1500;
+          var ex = tx + tw - mg - cr - (used - 1) * (cr * 2 + 6);
+          circ(ctx, ex - fa * 15, ty + th / 2 + fa * 10, cr * (1 - fa * 0.3), '#d97706', fa * 0.7);
+        }
+
+        // Particles
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], t = p.t, s = p.s, px, py, pr = 7, al = 1;
+          if (p.ok) {
+            if (t < 22) { var f = easeOut(t / 22); px = lerp(tx + tw + 30, tx + tw - mg - cr, f); py = lerp(ty + th * (0.3 + s * 0.4), ty + th / 2, f); }
+            else if (t < 36) { px = tx + tw - mg - cr; py = ty + th / 2; pr = lerp(7, 3, (t - 22) / 14); al = lerp(1, 0, (t - 22) / 14); }
+            else al = 0;
+            if (al > 0) circ(ctx, px, py, pr, '#22c55e', al);
+          } else {
+            if (t < 18) { var f = easeOut(t / 18); px = lerp(tx + tw + 30, tx + tw + 6, f); py = ty + th / 2; }
+            else { var f = (t - 18) / 72; px = tx + tw + 6 + f * 40; py = ty + th / 2 + f * f * 120; al = 1 - f; }
+            if (al > 0) circ(ctx, px, py, clamp(pr, 1, 12), '#ef4444', al);
+          }
+        }
+      }
+
+      // ── Sliding Window Counter Viz ──
+      function vizSC(ctx, W, H) {
+        var gp = 28, ww = (W * 0.75 - gp) / 2, wh = H * 0.48;
+        var lx = (W - ww * 2 - gp) / 2, rx = lx + ww + gp, wy = H * 0.2, rad = 10;
+
+        // Prev window (faded)
+        ctx.globalAlpha = 0.35;
+        rrect(ctx, lx, wy, ww, wh, rad); ctx.fillStyle = '#eae8e2'; ctx.fill();
+        ctx.strokeStyle = '#ccc'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.globalAlpha = 1;
+        gridDots(ctx, lx, wy, ww, wh, 9, 5, Math.min(tk.prevCount, tk.capacity), null, '#6366f1', false, 0.3);
+
+        // Current window
+        box(ctx, rx, wy, ww, wh, rad);
+        gridDots(ctx, rx, wy, ww, wh, 9, 5, tk.currCount, tk.capacity, '#6366f1', false);
+
+        // Labels
+        txt(ctx, 'PREV WINDOW', lx + ww / 2, wy - 12, "700 11px 'JetBrains Mono'", '#555');
+        txt(ctx, 'CURR WINDOW', rx + ww / 2, wy - 12, "700 11px 'JetBrains Mono'", '#555');
+        txt(ctx, '\u00D7 ' + tk.weight.toFixed(2), lx + ww / 2, wy + wh + 18, "600 11px 'JetBrains Mono'", '#666');
+        txt(ctx, '\u00D7 1.0', rx + ww / 2, wy + wh + 18, "600 11px 'JetBrains Mono'", '#666');
+
+        // Blend arrow
+        ctx.strokeStyle = '#999'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(lx + ww + 4, wy + wh / 2); ctx.lineTo(rx - 4, wy + wh / 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(rx - 10, wy + wh / 2 - 5); ctx.lineTo(rx - 4, wy + wh / 2); ctx.lineTo(rx - 10, wy + wh / 2 + 5); ctx.stroke();
+
+        // Formula
+        txt(ctx, 'count = (prev \u00D7 w) + curr', W / 2, wy + wh + 42, "700 13px 'JetBrains Mono'", '#6366f1');
+
+        // Particles
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], t = p.t, s = p.s, px, py, pr = 7, al = 1;
+          var tgtX = rx + ww * (0.2 + s * 0.6);
+          if (t < 18) { var f = easeOut(t / 18); px = tgtX; py = lerp(-10, wy - 6, f); }
+          else { var f = (t - 18) / 72; px = tgtX + (s - 0.5) * 70 * f; py = wy - 6 + f * f * 120; al = 1 - f; }
+          if (al > 0) circ(ctx, px, py, pr, p.ok ? '#22c55e' : '#ef4444', al);
+        }
+      }
+
+      // ── Leaky Bucket Viz ──
+      function vizLB(ctx, W, H) {
+        var bw = Math.min(180, W * 0.28), bh = H * 0.62;
+        var bx = W / 2 - bw / 2, by = H * 0.06, rad = 12;
+        var used = tk.capacity - tk.tokens;
+
+        // Bucket + queued circles
+        box(ctx, bx, by, bw, bh, rad);
+        gridDots(ctx, bx, by, bw, bh, 7, 3, used, null, '#6366f1', true, 0.8);
+
+        // Drain spout
+        var sw = 18, sh = 22, sx = W / 2 - sw / 2, sy = by + bh;
+        rrect(ctx, sx, sy, sw, sh, 4); ctx.fillStyle = '#eee'; ctx.fill();
+        ctx.strokeStyle = '#d0cec8'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // Drip animation
+        var drip = (Date.now() % 1000) / 1000;
+        if (used > 0 || parts.length > 0) circ(ctx, W / 2, sy + sh + 6 + drip * 30, 4, '#6366f1', 1 - drip);
+
+        // Labels
+        txt(ctx, used + ' / ' + tk.capacity + ' queued', bx + bw / 2, sy + sh + 48, "600 13px 'JetBrains Mono'", '#555');
+        txt(ctx, '\u25BC constant drain', bx + bw / 2, sy + sh + 64, "600 11px 'JetBrains Mono'", '#7c3aed');
+
+        // Particles
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], t = p.t, s = p.s, px, py, pr = 7, al = 1;
+          if (p.ok) {
+            if (t < 20) { var f = easeOut(t / 20); px = lerp(bx + bw * (0.2 + s * 0.6), bx + bw / 2, f); py = lerp(-10, by + 12, f); }
+            else if (t < 35) { px = bx + bw / 2; py = by + 12; pr = lerp(7, 3, (t - 20) / 15); al = lerp(1, 0, (t - 20) / 15); }
+            else al = 0;
+            if (al > 0) circ(ctx, px, py, pr, '#22c55e', al);
+          } else {
+            if (t < 18) { var f = easeOut(t / 18); px = bx + bw * (0.2 + s * 0.6); py = lerp(-10, by - 4, f); }
+            else { var f = (t - 18) / 72; px = bx + bw * (0.2 + s * 0.6) + (s - 0.5) * 80 * f; py = by - 4 + f * f * 120; al = 1 - f; }
+            if (al > 0) circ(ctx, px, py, clamp(pr, 1, 12), '#ef4444', al);
+          }
+        }
+      }
+
+      // Initial render
+      startViz();
+      switchTo(0);
+    })();
+  </script>
+</body>
+
+</html>
