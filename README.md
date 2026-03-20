@@ -4,11 +4,11 @@ An interactive dashboard for visualizing and comparing rate-limiting algorithms 
 
 ## Algorithms
 
-- **Token Bucket** — tokens refill at a steady rate; requests consume tokens
 - **Fixed Window** — counts requests in fixed time intervals
 - **Sliding Window Log** — tracks exact timestamps of each request
 - **Sliding Window Counter** — weighted blend of current and previous window counts
 - **Leaky Bucket** — requests drain at a constant rate from a queue
+- **Token Bucket** — tokens refill at a steady rate; requests consume tokens
 
 ## Prerequisites
 

@@ -640,11 +640,11 @@
     (function () {
       var $ = function (id) { return document.getElementById(id); };
       var ALGOS = [
-        { key: "token-bucket", name: "Token Bucket", desc: "Tokens refill at a steady rate. Each request costs tokens. Bursts allowed up to capacity; once empty, requests are rejected until refill.", barLabel: "Tokens" },
         { key: "fixed-window", name: "Fixed Window", desc: "Time is split into fixed windows. A counter tracks requests per window; once the limit is hit, requests are rejected until the next window.", barLabel: "Remaining" },
         { key: "sliding-window-log", name: "Sliding Log", desc: "Each request timestamp is stored. Entries older than the window are purged; if remaining count exceeds the limit, the request is denied.", barLabel: "Remaining" },
         { key: "sliding-window-counter", name: "Sliding Counter", desc: "Combines a weighted count from the previous window with the current window\u2019s count to approximate a sliding window.", barLabel: "Remaining" },
         { key: "leaky-bucket", name: "Leaky Bucket", desc: "Requests enter a finite queue and drain at a constant rate. When the queue is full, new arrivals are dropped.", barLabel: "Queue" },
+        { key: "token-bucket", name: "Token Bucket", desc: "Tokens refill at a steady rate. Each request costs tokens. Bursts allowed up to capacity; once empty, requests are rejected until refill.", barLabel: "Tokens" },
       ];
 
       var cur = 0, logs = [], stats = { total: 0, ok: 0, fail: 0 }, tk = { tokens: 100, capacity: 100, resetsIn: 0, prevCount: 0, currCount: 0, weight: 0 }, sending = false, pollTimer = null, parts = [], vizOn = false;
