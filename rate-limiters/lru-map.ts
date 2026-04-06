@@ -16,7 +16,7 @@ export class LRUMap<V> {
     cleanupIntervalMs?: number;
     getLastSeen: (v: V) => number;
   }) {
-    this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
+    this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000; // 30 minutes
     this.maxEntries = opts.maxEntries ?? 20_000;
     this.cleanupIntervalMs = opts.cleanupIntervalMs ?? 60 * 1000;
     this.getLastSeen = opts.getLastSeen;

@@ -31,6 +31,7 @@ class SlidingCounter {
 
   private shouldAllowRequest(ip: string) {
     const currentTime = Date.now();
+    
     this.requestCounts.cleanup(currentTime);
     const ipEntry = this.getOrCreateIpEntry(ip);
 

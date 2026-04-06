@@ -26,13 +26,16 @@ class SlidingLog {
 
   private shouldAllowRequest(ip: string) {
     const currentTime = Date.now();
-    this.requestLogs.cleanup(currentTime);
+    this.requestLogs.cleanup(currentTime); // Clean up old entries before checking current IP
+    
     const entry = this.getOrCreateEntry(ip);
     const logs = entry.timestamps;
+
     // Remove timestamps outside the window
     while (logs.length > 0 && currentTime - logs[0] >= this.windowSize) {
       logs.shift();
     }
+    
     if (logs.length < this.maxRequests) {
       logs.push(currentTime);
       entry.lastSeen = currentTime;

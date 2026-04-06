@@ -27,6 +27,7 @@ class LeakyBucket {
   private shouldAllowRequest(ip: string) {
     const currentTime = Date.now();
     this.buckets.cleanup(currentTime);
+
     const bucket = this.getOrCreateBucketForIp(ip);
     const timeSinceLastLeak = currentTime - bucket.lastLeakTime;
     const leakedTokens = Math.floor((timeSinceLastLeak / 1000) * this.leakRate);
@@ -44,6 +45,7 @@ class LeakyBucket {
       return true;
     }
 
+    bucket.lastSeen = currentTime;
     return false;
   }
 
